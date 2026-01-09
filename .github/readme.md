@@ -1,5 +1,3 @@
-
-```markdown
 # PDP-11/45 Minimal Kernel (C + C++ starter)
 
 Target
@@ -13,8 +11,9 @@ What this tree provides
 - Vector placeholders and timer IRQ hook
 - Context save/restore primitives (assembly)
 - Kernel core in C: kmain, basic task structure, create_task, timer IRQ -> scheduler
-- Tiny C++ utility (callable from C) for simple logging/formatting
-- Linker script and Makefile outline (you must point to an available PDP-11 cross-toolchain)
+- Tiny C++ helper (no exceptions, no RTTI, avoid STL)
+- Linker script and Makefile with placeholders for a PDP-11 cross-toolchain
+- SIMH config snippet and a README explaining next steps
 
 Build notes
 - PDP-11 cross-toolchains are uncommon; this Makefile uses placeholders:
@@ -33,5 +32,3 @@ Next steps I can do after you confirm:
 - Produce the files and attempt to build a SIMH-ready kernel.bin (pick a toolchain or let me pick one).
 - Implement MMU initialization and a per-process mapping example for PDP-11/45.
 - Implement a simple disk loader to boot from simulated RK/RL disk images in SIMH.
-
-```
