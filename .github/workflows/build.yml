@@ -1,3 +1,46 @@
+name: Build PDP-11 kernel (Docker toolchain)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install host packages (best-effort)
+        run: |
+          sudo apt-get update
+          # install docker (runner already has docker in most cases), wget/tar for fallback
+          sudo apt-get install -y docker.io wget tar gzip || true
+          docker --version || true
+          wget --version || true
+
+      - name: Look for local PDP-11 toolchain
+        id: toolchain-check
+        run: |
+          echo "Checking for local PDP-11 toolchain on PATH..."
+          if command -v pdp11-as >/dev/null 2>&1 || command -v pdp11-gcc >/dev/null 2>&1; then
+            echo "toolchain_found=true" >> $GITHUB_OUTPUT
+            command -v pdp11-as || true
+            pdp11-gcc --version 2>/dev/null || true
+          else
+            echo "toolchain_found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build with local toolchain (if present)
+        if: steps.toolchain-check.outputs.toolchain_found == 'true'
+        run: |
+          echo "Local PDP-11 toolchain found; running make"
+          make -j$(nproc) || true
+
       - name: Build with Docker-based PDP-11 toolchain (fallback)
         if: steps.toolchain-check.outputs.toolchain_found != 'true'
         env:
@@ -12,3 +55,25 @@
           docker run --rm -v "${WORKDIR}":/work -w /work retrobrew/pdp11:latest /bin/sh -c "ls -la /work && make -j$(nproc)" > out/make.log 2>&1 || true
           echo "=== end of container build output ==="
           echo "Saved container output to out/make.log"
+
+      - name: Collect build outputs
+        run: |
+          mkdir -p out || true
+          cp -v kernel.bin kernel.elf out/ 2>/dev/null || true
+          echo "Out directory contents:"
+          ls -la out || true
+          echo "Workspace top level:"
+          ls -la
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdp11-build-output
+          path: out/
+
+      - name: Upload full workspace (debug logs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdp11-build-workspace
+          path: .
